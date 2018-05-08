@@ -5,7 +5,10 @@ import os
 import pickle
 import pandas as pd
 
-# ALl classes are ...
+# ALl classes are heirs of luigi.Task class
+# require - something that we need before work (mostly, launch of some another class)
+# output - something that we need after our work (in most cases, a file)
+# run - fucntion with all our business logic
 
 class GetApiData(luigi.Task):
     # parameter for n_points
@@ -15,11 +18,11 @@ class GetApiData(luigi.Task):
         return luigi.LocalTarget('data/{}.csv'.format(tu.date_hour()))
 
     def run(self):
-        # create paths
+        # create folders if they do not exist
         tu.create_paths(['data','log','validation','model'])
         # load nodes from file
         nodes_df = tu.load_nodes()
-        # trying to load maximum row_id
+        # load the maximum row_id
         try:
             max_row_id = tu.load_max_row('uber.sqlite', 'requests', 'row_id')
             if max_row_id is None:
@@ -36,6 +39,7 @@ class GetApiData(luigi.Task):
 class SaveApiToSql(luigi.Task):
 
     def requires(self):
+        # our previous Task musr work correctly
         return GetApiData()
 
     def output(self):
@@ -50,7 +54,7 @@ class SaveApiToSql(luigi.Task):
         # insert values from dataframe into sql table
         tu.insert_df_values(results, 'uber.sqlite', 'requests')
 
-        # idea from
+        # idea with virtual file from
         # https://stackoverflow.com/questions/42816889/replacing-a-table-load-function-with-a-luigi-task
         with open('log/{}_api_sql.txt'.format(tu.date_hour()), 'w') as f:
             f.write(tu.date_hour())
@@ -89,7 +93,7 @@ class SaveValidationToSql(luigi.Task):
         # insert values from dataframe into sql table
         tu.insert_df_values(results[['row_id','prediction']], 'uber.sqlite',
                                                                 'predictions')
-        # idea from
+        # idea with virtual file from
         # https://stackoverflow.com/questions/42816889/replacing-a-table-load-function-with-a-luigi-task
         with open('log/{}_validation_sql.txt'.format(tu.date_hour()), 'w') as f:
             f.write(tu.date_hour())
@@ -112,4 +116,5 @@ class TrainModel(luigi.Task):
             pickle.dump(model, f)
 
 if __name__ == '__main__':
+    # run our pipeline
     luigi.run()

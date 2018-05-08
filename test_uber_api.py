@@ -1,9 +1,3 @@
-
-# coding: utf-8
-
-# In[56]:
-
-
 import pandas as pd
 import numpy as np
 
